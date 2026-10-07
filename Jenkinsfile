@@ -52,7 +52,7 @@ node('docker') {
             git.fetch()
 
 
-            if (branch == "master") {
+            if (branch == "main") {
                 echo "This branch has been detected as the master branch."
                 sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName}"
             } else if (branch == "develop") {
