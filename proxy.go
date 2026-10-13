@@ -38,7 +38,11 @@ func NewProxy(c Config, logger *slog.Logger) *Proxy {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		panic("http.DefaultTransport must be an *http.Transport")
+	}
+	transport := defaultTransport.Clone()
 	// Environment HTTP proxies must not intercept local upstream traffic.
 	transport.Proxy = nil
 	if c.UpstreamSocket != "" {
@@ -47,7 +51,7 @@ func NewProxy(c Config, logger *slog.Logger) *Proxy {
 		}
 	}
 	target := &url.URL{Scheme: "http", Host: net.JoinHostPort(c.UpstreamHost, strconv.Itoa(c.UpstreamPort))}
-	casTransport := http.DefaultTransport.(*http.Transport).Clone()
+	casTransport := defaultTransport.Clone()
 	casTransport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: c.CASInsecure} // explicitly configured for CAS only
 	casClient := &http.Client{
 		Transport: casTransport, Timeout: time.Duration(c.ValidationTimeout) * time.Second,
@@ -82,7 +86,10 @@ func (p *Proxy) Run() error {
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := server.Shutdown(shutdown); err != nil {
-			server.Close()
+			err := server.Close()
+			if err != nil {
+				return err
+			}
 			return errors.New("proxy shutdown timed out")
 		}
 		return nil
@@ -186,7 +193,9 @@ func (p *Proxy) validate(r *http.Request, c Config, logEvent func(event string, 
 		fail(http.StatusBadGateway)
 		return true
 	}
-	response.Body.Close()
+	if err := response.Body.Close(); err != nil {
+		logEvent("cas_response_body_close_error")
+	}
 	if response.StatusCode != http.StatusOK {
 		status := http.StatusBadGateway
 		if response.StatusCode == 400 || response.StatusCode == 401 {
