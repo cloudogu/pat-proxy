@@ -126,7 +126,7 @@ Kann die Weiterleitung nicht durchgeführt werden, liefert der Proxy `502`.
 ## Bauen und starten
 
 Alle folgenden Build-Befehle werden im Stammverzeichnis dieses Repositorys
-ausgeführt. Das Projekt verlangt laut `go.mod` Go **1.26.0**.
+ausgeführt.
 
 ### Mit Make und Docker bauen
 
