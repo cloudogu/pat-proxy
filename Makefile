@@ -21,6 +21,7 @@ include build/make/test-common.mk
 include build/make/test-unit.mk
 include build/make/static-analysis.mk
 include build/make/clean.mk
+include build/make/release.mk
 include build/make/package-tar.mk
 include build/make/digital-signature.mk
 include build/make/mocks.mk
