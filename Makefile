@@ -1,7 +1,7 @@
 PACKAGES=$(shell go list ./... | grep -v /vendor/)
 
 ARTIFACT_ID=pat-proxy
-VERSION=0.1.0
+VERSION=0.0.1
 BUILD_TIME:=$(shell date +%FT%T%z)
 COMMIT_ID:=$(shell git rev-parse HEAD)
 GOTAG=1.26.0
