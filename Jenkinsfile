@@ -18,6 +18,13 @@ node('docker') {
         checkout scm
     }
 
+    Git git = new Git(this, 'cesmarvin')
+    git.committerName = 'cesmarvin'
+    git.committerEmail = 'cesmarvin@cloudogu.com'
+    GitFlow gitflow = new GitFlow(this, git)
+    GitHub github = new GitHub(this, git)
+    Changelog changelog = new Changelog(this)
+
     Docker docker = new Docker(this)
     docker.image("golang:${goVersion}").mountJenkinsUser(true).inside("--volume ${WORKSPACE}:/go/src/${project}") {
 
@@ -48,21 +55,23 @@ node('docker') {
     stage('SonarQube') {
         def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         withSonarQubeEnv {
-            Git git = new Git(this, "cesmarvin")
             git.fetch()
 
 
             if (branch == "main") {
-                echo "This branch has been detected as the master branch."
+                echo "This branch has been detected as the main branch."
                 sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName}"
             } else if (branch == "develop") {
                 echo "This branch has been detected as the develop branch."
-                sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=master  "
+                sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=main  "
             } else if (env.CHANGE_TARGET) {
                 echo "This branch has been detected as a pull request."
                 sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${env.CHANGE_BRANCH}-PR${env.CHANGE_ID} -Dsonar.branch.target=${env.CHANGE_TARGET} "
             } else if (branch.startsWith("feature/")) {
                 echo "This branch has been detected as a feature branch."
+                sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=develop"
+            } else {
+                echo "This branch has been detected as a miscellaneous branch."
                 sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=${projectName} -Dsonar.projectName=${projectName} -Dsonar.branch.name=${env.BRANCH_NAME} -Dsonar.branch.target=develop"
             }
         }
@@ -71,6 +80,41 @@ node('docker') {
             if (qGate.status != 'OK') {
                 unstable("Pipeline unstable due to SonarQube quality gate failure")
             }
+        }
+    }
+
+    if (!env.CHANGE_ID && gitflow.isReleaseBranch()) {
+        String releaseVersion = git.getSimpleBranchName()
+        String releaseArtifact = "pat-proxy-${releaseVersion.substring(1)}.tar.gz"
+
+        stage('Finish Release') {
+            if (currentBuild.currentResult != 'SUCCESS') {
+                error('Release requires a successful build and SonarQube quality gate.')
+            }
+            String versionLine = readFile('Makefile').readLines().find { it.startsWith('VERSION=') }
+            if (!versionLine || releaseVersion != "v${versionLine.substring('VERSION='.length()).trim()}") {
+                error('Release branch must match the VERSION in Makefile (release/v<VERSION>).')
+            }
+            changelog.changesForVersion(releaseVersion)
+            gitflow.finishRelease(releaseVersion, 'main')
+        }
+
+        docker.image("golang:${goVersion}").mountJenkinsUser(true).inside("--volume ${WORKSPACE}:/go/src/${project}") {
+            stage('Build after Release') {
+                git.checkout(releaseVersion)
+                withAuthenticatedGithub {
+                    make 'clean package'
+                }
+                archiveArtifacts 'target/*.tar.gz'
+            }
+        }
+
+        stage('Add Github-Release') {
+            String releaseId = github.createReleaseWithChangelog(releaseVersion, changelog, 'main')
+            if (!releaseId) {
+                error('GitHub release creation failed.')
+            }
+            github.addReleaseAsset(releaseId, "target/${releaseArtifact}")
         }
     }
 }

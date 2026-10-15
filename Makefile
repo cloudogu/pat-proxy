@@ -1,7 +1,7 @@
 PACKAGES=$(shell go list ./... | grep -v /vendor/)
 
 ARTIFACT_ID=pat-proxy
-VERSION=0.1.0
+VERSION=0.0.2
 BUILD_TIME:=$(shell date +%FT%T%z)
 COMMIT_ID:=$(shell git rev-parse HEAD)
 GOTAG=1.26.0
@@ -21,9 +21,11 @@ include build/make/test-common.mk
 include build/make/test-unit.mk
 include build/make/static-analysis.mk
 include build/make/clean.mk
+include build/make/release.mk
 include build/make/package-tar.mk
 include build/make/digital-signature.mk
 include build/make/mocks.mk
+
 
 LINT_VERSION=v2.9.0
 
