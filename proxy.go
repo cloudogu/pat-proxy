@@ -116,7 +116,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(status), status)
 	}
 
-	// remove x-intenal header for clean request
+	// remove x-internal header for clean request
 	stripInternalHeaders(r.Header)
 
 	// get username from request and check if it is pat_ password request
