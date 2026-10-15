@@ -24,6 +24,8 @@ include build/make/clean.mk
 include build/make/package-tar.mk
 include build/make/digital-signature.mk
 include build/make/mocks.mk
+include build/make/release.mk
+
 
 LINT_VERSION=v2.9.0
 
