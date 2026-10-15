@@ -60,3 +60,15 @@ Methode, Body, Pfad, Query und Host bleiben erhalten.
 
 SIGINT/SIGTERM erlauben bis zu fünf Sekunden zum Abschließen laufender Anfragen.
 
+## Release erstellen
+
+Voraussetzungen sind Git Flow (`git flow`), lokale Branches `main` und `develop`
+sowie Schreibzugriff auf `origin`. Alle Änderungen müssen committed und nach
+`develop` gepusht sein.
+
+```sh
+git checkout main
+git checkout develop
+make go-release
+```
+
