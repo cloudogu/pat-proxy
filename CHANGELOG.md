@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.0.2] - 2026-10-15
+## [v0.1.1] - 2026-10-15
 ### Added
 - Release workflow via `make go-release` and Jenkins, including GitHub releases with the tar.gz package.
 
